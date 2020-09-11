@@ -1,6 +1,0 @@
-Detailed Instructions:
-In this PoC, I have used 2 VPC and explained the steps required to inject the envoy and have the traffic intercepted by them.
- 
-Architecture diagram is attached in the doc  and it involves a front end application deployed in the public subnet on the VPC1 (running on EC2 instances) and two backends deployed in the VPC1 and VPC2 respectively (running as ECS Fargate tasks).
- 
-As discussed earlier, injecting the envoy is very straight forward and as long as we have the communication between the different VPC and ability to resolve the endpoints, we should be able to integrate application with AppMesh. In this setup, I have peered the VPCs and wanted to let you know that we can use transit gateway as well
