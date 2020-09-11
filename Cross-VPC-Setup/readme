@@ -1,16 +1,16 @@
 
 
 
-# WK – AWS App Mesh PoC
+##  WK – AWS App Mesh PoC
 
-1.	Workspace Creation / Setting up the cloud 9
+STEP 1.	Workspace Creation / Setting up the cloud 9
 
 -	We will launch the cloud 9 environment, name it AppMesh-Workshop and attach an IAM role with admin access as explained in https://www.appmeshworkshop.com/prerequisites/workspace/
 -	We will then install the required tools and clone the service repos as explained in https://www.appmeshworkshop.com/prerequisites/installtools/ & https://www.appmeshworkshop.com/prerequisites/clone/
 
 
 
-2.	Setting up the Infrastructure
+STEP 2.	Setting up the Infrastructure
 
 -	Now we will setup the infrastructure required to complete the PoC
 -	We will first deploy the baseline stack that will launch the following
@@ -28,7 +28,7 @@ o	We will have to make slight changes to the CF template. On the line 51, modify
 
 
 
-3.	Peer the VPC and add the A record in Route 53
+STEP 3.	Peer the VPC and add the A record in Route 53
 -	The Front end has a ruby script that automatically hits the nodejs and crystal backend every 5 seconds.
 -	In order for the front end to reach the nodejs in the second vpc, we will have to peer them and add the necessary routes.
 -	Peer the VPC 1 and VPC2 and add the routes pointing to the peering connection on the routing table of the Front end Ruby EC2 instances like below :
@@ -46,7 +46,7 @@ Route table of the Ruby EC2 application :
 -	Create the A record for the nodejs application where the nodejs.appmesh.hosted.local to point to the LB FQDN as below :
 
  
-4.	Deploying the application 
+STEP 4.	Deploying the application 
 -	As we have completed the pre-reqs , we will now deploy the application as mentioned in the links : https://www.appmeshworkshop.com/prerequisites/bootstrapsh/
 o	Exclude the EKS Cluster creation step and add the below step which creates the nodejs service 
 -	Creating nodejs service:
