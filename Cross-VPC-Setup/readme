@@ -1,0 +1,299 @@
+
+
+
+# WK – AWS App Mesh PoC
+
+1.	Workspace Creation / Setting up the cloud 9
+
+-	We will launch the cloud 9 environment, name it AppMesh-Workshop and attach an IAM role with admin access as explained in https://www.appmeshworkshop.com/prerequisites/workspace/
+-	We will then install the required tools and clone the service repos as explained in https://www.appmeshworkshop.com/prerequisites/installtools/ & https://www.appmeshworkshop.com/prerequisites/clone/
+
+
+
+2.	Setting up the Infrastructure
+
+-	Now we will setup the infrastructure required to complete the PoC
+-	We will first deploy the baseline stack that will launch the following
+o	VPC with private and public subnets - including routes, NAT Gateways and an Internet Gateway (VPC1 – 10.0.0.0/16)
+o	VPC Endpoints to privately connect your VPC to AWS services
+o	An ECS cluster with no EC2 resources because we’re using Fargate (Crystal backend)
+o	ECR repositories for your container images
+o	A Launch Template and an Auto Scaling Group for your EC2 based services
+o	Two Application Load Balancers to front internal and external services
+o	A Private Hosted Zone for service discovery
+-	The link to the CF template and the steps are mentioned in the link : https://www.appmeshworkshop.com/prerequisites/deploycfn/
+-	Run the command in the link https://www.appmeshworkshop.com/prerequisites/sshkey/ to retrieve the SSH Key and store it in Cloud9. This key will be used on the ec2 and worker node instances to allow ssh access if necessary.
+-	We will now deploy the cloudformation stack that will launch the second VPC (VPC2 – 10.1.0.0/16), network components, ECS cluster for the second backend (Nodejs). CF template is attached in the email. Make sure you name the stack as appmesh-workshop-nodejs
+o	We will have to make slight changes to the CF template. On the line 51, modify the image information of the nodejs to point to the ECR image URI created in the previous step
+
+
+
+3.	Peer the VPC and add the A record in Route 53
+-	The Front end has a ruby script that automatically hits the nodejs and crystal backend every 5 seconds.
+-	In order for the front end to reach the nodejs in the second vpc, we will have to peer them and add the necessary routes.
+-	Peer the VPC 1 and VPC2 and add the routes pointing to the peering connection on the routing table of the Front end Ruby EC2 instances like below :
+
+
+ 
+Route table of the Ruby EC2 application :
+
+
+ 
+
+-	Now let’s add the route on the route table of the subnet where the internal load balancer of the nodejs is launched as below to send the packet to the EC2 instances. The LB uses 2 subnets and hence add the route in both subnet
+ 
+
+-	Create the A record for the nodejs application where the nodejs.appmesh.hosted.local to point to the LB FQDN as below :
+
+ 
+4.	Deploying the application 
+-	As we have completed the pre-reqs , we will now deploy the application as mentioned in the links : https://www.appmeshworkshop.com/prerequisites/bootstrapsh/
+o	Exclude the EKS Cluster creation step and add the below step which creates the nodejs service 
+-	Creating nodejs service:
+-	STACK_NAME=appmesh-workshop-nodejs
+-	aws cloudformation describe-stacks \
+-	  --stack-name "$STACK_NAME" | \
+-	jq -r '[.Stacks[0].Outputs[] | 
+-	    {key: .OutputKey, value: .OutputValue}] | from_entries' > cfn-output-nodejs.json
+	CLUSTER=$(jq < cfn-output-nodejs.json -r '.EcsClusterName')
+TASK_DEF=$(jq < cfn-output-nodejs.json -r '.NodejsTaskDefinition')
+TARGET_GROUP=$(jq < cfn-output-nodejs.json -r '.NodejsTargetGroupArn')
+SUBNET_ONE=$(jq < cfn-output-nodejs.json -r '.PrivateSubnetOne')
+SUBNET_TWO=$(jq < cfn-output.json -r '.PrivateSubnetTwo')
+SUBNET_THREE=$(jq < cfn-output.json -r '.PrivateSubnetThree')
+SECURITY_GROUP=$(jq < cfn-output.json -r '.ContainerSecurityGroup')     
+
+aws ecs create-service \
+  --cluster $CLUSTER \
+  --service-name nodejs-service-lb \
+  --task-definition $TASK_DEF \
+  --load-balancer targetGroupArn=$TARGET_GROUP,containerName=nodejs-service,containerPort=3000 \
+  --desired-count 3 \
+  --launch-type FARGATE \
+  --network-configuration \
+      "awsvpcConfiguration={
+        subnets=[$SUBNET_ONE,$SUBNET_TWO,$SUBNET_THREE],
+        securityGroups=[$SECURITY_GROUP],
+        assignPublicIp=DISABLED}"
+
+-	This Concludes the infrastructure setup and the pre-reqs and you should see the below page when you hit the external load balancer
+
+
+
+ 
+5.	Meshifying the Crystal applications
+a.	Mesh the Backend Crystal Service
+i.	At this point, you should have the application up and running in your lab environment with the EC2 instances serving the frontend with ECS managing the backend.
+b.	Create the Appmesh as explained in https://www.appmeshworkshop.com/mesh_crystal/createmesh/
+c.	Create the Virtual Service as mentioned in https://www.appmeshworkshop.com/mesh_crystal/virtualservice/
+d.	Add the envoy sidecar proxy as mentioned in https://www.appmeshworkshop.com/mesh_crystal/installenvoy/\
+6.	 Meshify the Nodejs application	
+a.	Create the virtual node using the below steps
+7.	INT_LOAD_BALANCER=$(jq < cfn-output-nodejs.json -r '.InternalLoadBalancerDNS');
+8.	SPEC=$(cat <<-EOF
+9.	  { 
+10.	    "serviceDiscovery": {
+11.	      "dns": { 
+12.	        "hostname": "$INT_LOAD_BALANCER"
+13.	      }
+14.	    },
+15.	    "logging": {
+16.	      "accessLog": {
+17.	        "file": {
+18.	          "path": "/dev/stdout"
+19.	        }
+20.	      }
+21.	    },      
+22.	    "listeners": [
+23.	      {
+24.	        "healthCheck": {
+25.	          "healthyThreshold": 3,
+26.	          "intervalMillis": 10000,
+27.	          "path": "/health",
+28.	          "port": 3000,
+29.	          "protocol": "http",
+30.	          "timeoutMillis": 5000,
+31.	          "unhealthyThreshold": 3
+32.	        },
+33.	        "portMapping": { "port": 3000, "protocol": "http" }
+34.	      }
+35.	    ]
+36.	  }
+37.	EOF
+38.	); \
+39.	# Create app mesh virual node #
+40.	aws appmesh create-virtual-node \
+41.	  --mesh-name appmesh-workshop \
+42.	  --virtual-node-n
+
+# Define variables #
+SPEC=$(cat <<-EOF
+  { 
+    "provider": {
+      "virtualNode": { 
+        "virtualNodeName": "nodejs-lb-strawberry"
+      }
+    }
+  }
+EOF
+); \
+# Create app mesh virtual service #
+aws appmesh create-virtual-service \
+  --mesh-name appmesh-workshop \
+  --virtual-service-name nodejs.appmeshworkshop.hosted.local \
+  --spec "$SPEC"
+
+
+	b. Add the envoy side car
+# Define variables #
+ENVOY_REGISTRY="840364872350.dkr.ecr.$AWS_REGION.amazonaws.com";
+TASK_DEF_ARN=$(jq < cfn-output-nodejs.json -r '.NodejsTaskDefinition');
+TASK_DEF_OLD=$(aws ecs describe-task-definition --task-definition $TASK_DEF_ARN);
+TASK_DEF_NEW=$(echo $TASK_DEF_OLD \
+  | jq ' .taskDefinition' \
+  | jq --arg ENVOY_REGISTRY $ENVOY_REGISTRY ' .containerDefinitions += 
+        [
+          {
+            "environment": [
+              {
+                "name": "APPMESH_VIRTUAL_NODE_NAME",
+                "value": "mesh/appmesh-workshop/virtualNode/nodejs-lb-strawberry"
+              }
+            ],
+            "image": ($ENVOY_REGISTRY + "/aws-appmesh-envoy:v1.11.2.0-prod"),
+            "healthCheck": {
+              "retries": 3,
+              "command": [
+                "CMD-SHELL",
+                "curl -s http://localhost:9901/server_info | grep state | grep -q LIVE"
+              ],
+              "timeout": 2,
+              "interval": 5,
+              "startPeriod": 10
+            },
+            "essential": true,
+            "user": "1337",
+            "name": "envoy"
+          }
+        ]' \
+  | jq ' .containerDefinitions[0] +=
+        { 
+          "dependsOn": [ 
+            { 
+              "containerName": "envoy",
+              "condition": "HEALTHY" 
+            }
+          ] 
+        }' \
+  | jq ' . += 
+        { 
+          "proxyConfiguration": {
+            "type": "APPMESH",
+            "containerName": "envoy",
+            "properties": [
+              { "name": "IgnoredUID", "value": "1337"},
+              { "name": "ProxyIngressPort", "value": "15000"},
+              { "name": "ProxyEgressPort", "value": "15001"},
+              { "name": "AppPorts", "value": "3000"},
+              { "name": "EgressIgnoredIPs", "value": "169.254.170.2,169.254.169.254"}
+            ]
+          }
+        }' \
+  | jq ' del(.status, .compatibilities, .taskDefinitionArn, .requiresAttributes, .revision) '
+); \
+
+TASK_DEF_FAMILY=$(echo $TASK_DEF_ARN | cut -d"/" -f2 | cut -d":" -f1);
+echo $TASK_DEF_NEW > /tmp/$TASK_DEF_FAMILY.json && 
+# Register ecs task definition #
+aws ecs register-task-definition \
+  --cli-input-json file:///tmp/$TASK_DEF_FAMILY.json
+
+Update the service.
+# Define variables #
+CLUSTER_NAME=$(jq < cfn-output-nodejs.json -r '.EcsClusterName');
+TASK_DEF_ARN=$(aws ecs list-task-definitions | \
+  jq -r ' .taskDefinitionArns[] | select( . | contains("nodejs"))' | tail -1);
+# Update ecs service #
+aws ecs update-service \
+  --cluster $CLUSTER_NAME \
+  --service nodejs-service-lb \
+  --task-definition "$(echo $TASK_DEF_ARN)"
+
+Next, you will validate Envoy is actually proxing the requests in its way in and out of the Crystal microservice. To do so, we will issue a curl command to the IP address of any of the 3 tasks running as part of the Crystal service.
+•	Start a Session Manager session with any of the EC2 instances.
+•	AUTO_SCALING_GROUP=$(jq < cfn-output.json -r '.RubyAutoScalingGroupName');
+•	TARGET_EC2=$(aws ec2 describe-instances \
+•	    --filters Name=tag:aws:autoscaling:groupName,Values=$AUTO_SCALING_GROUP | \
+•	  jq -r ' .Reservations | first | .Instances | first | .InstanceId')
+•	aws ssm start-session --target $TARGET_EC2
+•	AUTO_SCALING_GROUP=$(jq < cfn-output.json -r '.RubyAutoScalingGroupName');
+•	TARGET_EC2=$(aws ec2 describe-instances \
+•	    --filters Name=tag:aws:autoscaling:groupName,Values=$AUTO_SCALING_GROUP | \
+•	  jq -r ' .Reservations | first | .Instances | first | .InstanceId')
+•	aws ssm start-session --target $TARGET_EC2
+•	TARGET_IP=$(dig +short crystal.appmeshworkshop.hosted.local | head -1)
+•	curl -v $TARGET_IP:3000/crystal
+•	
+•	##Output
+•	
+•	*   Trying 10.0.101.198...
+•	* TCP_NODELAY set
+•	* Connected to 10.0.101.198 (10.0.101.198) port 3000 (#0)
+•	> GET /crystal HTTP/1.1
+•	> Host: 10.0.101.198:3000
+•	> User-Agent: curl/7.61.1
+•	> Accept: */*
+•	> 
+•	< HTTP/1.1 200 OK
+•	< Date: Mon, 07 Sep 2020 15:23:10 GMT
+•	< Content-Type: text/plain
+•	< Content-Length: 64
+•	< Connection: keep-alive
+•	< x-envoy-upstream-service-time: 0
+•	< server: envoy
+•	< 
+•	Crystal backend: Hello! from 10.0.100.141 in AZ-a commit NOHASH
+•	* Connection #0 to host 10.0.101.198 left intact
+•	
+•	###For Nodejs
+•	
+•	TARGET_IP=$(dig +short nodejs.appmeshworkshop.hosted.local | head -1)
+•	curl -v $TARGET_IP:3000
+•	
+•	##Output
+•	
+•	 Rebuilt URL to: 10.1.101.73:3000/
+•	*   Trying 10.1.101.73...
+•	* TCP_NODELAY set
+•	* Connected to 10.1.101.73 (10.1.101.73) port 3000 (#0)
+•	> GET / HTTP/1.1
+•	> Host: 10.1.101.73:3000
+•	> User-Agent: curl/7.61.1
+•	> Accept: */*
+•	> 
+•	< HTTP/1.1 200 OK
+•	< Date: Mon, 07 Sep 2020 15:25:28 GMT
+•	< Content-Type: text/plain; charset=utf-8
+•	< Content-Length: 65
+•	< Connection: keep-alive
+•	< x-powered-by: Express
+•	< etag: W/"41-rFsVlB37dZsYNQd41rJS1sCzBG4"
+•	< x-envoy-upstream-service-time: 52
+•	< server: envoy
+•	< 
+•	Node.js backend: Hello! from 10.1.101.241 in AZ-b commit 219f52d
+•	* Connection #0 to host 10.1.101.73 left intact
+
+7. Meshify the frontend
+
+-	Now let’s meshify the frontend using the steps mentioned in https://www.appmeshworkshop.com/mesh_frontend/virtualservice/
+-	Install the envoy proxy as mentioned in https://www.appmeshworkshop.com/mesh_frontend/installenvoy/
+-	
+
+
+ARCHITECTUTE DIAGRAM
+
+ 
+
+
+
