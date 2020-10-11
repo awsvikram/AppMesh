@@ -62,6 +62,9 @@ Resources:
             - ContainerPort: 3000
               Protocol: http
           Essential: true
+          DependsOn:
+            - ContainerName: "envoy"
+              Condition: "HEALTHY"
           HealthCheck:
             Command: 
               - CMD-SHELL
@@ -70,6 +73,21 @@ Resources:
             Retries: 3
             StartPeriod: 10
             Timeout: 2
+        - Name: envoy
+          Image: "840364872350.dkr.ecr.eu-west-2.amazonaws.com/aws-appmesh-envoy:v1.11.2.0-prod"
+          Essential: true
+          User: 1337
+          Environment:
+           - Name: "APPMESH_VIRTUAL_NODE_NAME"
+             Value: "mesh/appmesh-workshop/virtualNode/crystal-lb-vanilla"
+          HealthCheck:
+            Command:
+              - CMD-SHELL
+              - curl -s http://localhost:9901/server_info | grep state | grep -q LIVE
+            Retries: 3
+            Timeout: 2
+            Interval: 5
+            StartPeriod: 10
 
   ExternalLoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -567,6 +585,8 @@ Resources:
                 - 'logs:CreateLogGroup'
                 - 'logs:PutLogEvents'
                 - 'appmesh:StreamAggregatedResources'
+                - 'acm:ExportCertificate'
+                - 'acm-pca:GetCertificateAuthorityCertificate'
                 - 'xray:PutTraceSegments'
                 - 'xray:PutTelemetryRecords'
                 - 'xray:GetSamplingRules'
