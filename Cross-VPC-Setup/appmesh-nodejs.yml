@@ -48,7 +48,7 @@ Resources:
       TaskRoleArn: !GetAtt ECSTaskRole.Arn
       ContainerDefinitions:
         - Name: nodejs-service
-          Image: XXXXXXXXXXXX.dkr.ecr.eu-west-2.amazonaws.com/nodejs-65ggzce3vchv:latest
+          Image: brentley/ecsdemo-nodejs
           PortMappings:
             - ContainerPort: 3000
               Protocol: http
