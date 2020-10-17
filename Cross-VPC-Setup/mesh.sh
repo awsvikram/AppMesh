@@ -1,5 +1,6 @@
 # Mesh components for Crystal backend
 Certificate_Arn=$(aws acm list-certificates | jq -r '.CertificateSummaryList[0].CertificateArn');
+CA_Arn=$(aws acm-pca list-certificate-authorities |jq -r '.CertificateAuthorities[0].Arn');
 SPEC=$(cat <<-EOF
   { 
     "serviceDiscovery": {
@@ -149,7 +150,6 @@ aws appmesh create-virtual-service   --mesh-name appmesh-workshop   --virtual-se
 # Mesh Components for Frontend Ruby application
 
 EXT_LOAD_BALANCER=$(jq < cfn-crystal.json -r '.ExternalLoadBalancerDNS');
-CA_Arn=$(aws acm-pca list-certificate-authorities |jq -r '.CertificateAuthorities[0].Arn');
 SPEC=$(cat <<-EOF
   { 
     "serviceDiscovery": {
