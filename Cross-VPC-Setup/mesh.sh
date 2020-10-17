@@ -7,6 +7,21 @@ SPEC=$(cat <<-EOF
         "hostname": "crystal.appmeshworkshop.hosted.local"
       }
     },
+    "backendDefaults": {
+      "clientPolicy": {
+        "tls": {
+          "validation": {
+            "trust": {
+              "acm": {
+                "certificateAuthorityArns": [
+                  "$CA_Arn"
+                ]
+              }  
+            }
+          }
+        }
+      }
+    },
     "logging": {
       "accessLog": {
         "file": {
@@ -66,6 +81,21 @@ SPEC=$(cat <<-EOF
     "serviceDiscovery": {
       "dns": { 
         "hostname": "nodejs.appmeshworkshop.hosted.local"
+      }
+    },
+    "backendDefaults": {
+      "clientPolicy": {
+        "tls": {
+          "validation": {
+            "trust": {
+              "acm": {
+                "certificateAuthorityArns": [
+                  "$CA_Arn"
+                ]
+              }  
+            }
+          }
+        }
       }
     },
     "logging": {
@@ -172,7 +202,15 @@ SPEC=$(cat <<-EOF
           "timeoutMillis": 5000,
           "unhealthyThreshold": 3
         },
-        "portMapping": { "port": 3000, "protocol": "http" }
+        "portMapping": { "port": 3000, "protocol": "http" },
+        "tls": {
+          "mode": "PERMISSIVE",
+          "certificate": {
+            "acm": {
+              "certificateArn": "$Certificate_Arn"
+            } 
+          }
+        }  
       }
     ]
   }
