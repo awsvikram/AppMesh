@@ -1,11 +1,10 @@
 # Mesh components for Crystal backend
-INT_LOAD_BALANCER1=$(jq < cfn-crystal.json -r '.InternalLoadBalancerDNS');
 Certificate_Arn=$(aws acm list-certificates | jq -r '.CertificateSummaryList[0].CertificateArn');
 SPEC=$(cat <<-EOF
   { 
     "serviceDiscovery": {
       "dns": { 
-        "hostname": "$INT_LOAD_BALANCER1"
+        "hostname": "crystal.appmeshworkshop.hosted.local"
       }
     },
     "logging": {
@@ -28,7 +27,7 @@ SPEC=$(cat <<-EOF
         },
         "portMapping": { "port": 3000, "protocol": "http" },
         "tls": {
-          "mode": "STRICT",
+          "mode": "PERMISSIVE",
           "certificate": {
             "acm": {
               "certificateArn": "$Certificate_Arn"
@@ -62,12 +61,11 @@ aws appmesh create-virtual-service   --mesh-name appmesh-workshop   --virtual-se
 
 ## Now creating the Nodejs appmesh components
 
-INT_LOAD_BALANCER2=$(jq < cfn-nodejs.json -r '.InternalLoadBalancerDNS');
 SPEC=$(cat <<-EOF
 { 
     "serviceDiscovery": {
       "dns": { 
-        "hostname": "$INT_LOAD_BALANCER2"
+        "hostname": "nodejs.appmeshworkshop.hosted.local"
       }
     },
     "logging": {
@@ -90,7 +88,7 @@ SPEC=$(cat <<-EOF
         },
         "portMapping": { "port": 3000, "protocol": "http" },
         "tls": {
-          "mode": "STRICT",
+          "mode": "PERMISSIVE",
           "certificate": {
             "acm": {
               "certificateArn": "$Certificate_Arn"
