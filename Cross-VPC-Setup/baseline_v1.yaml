@@ -530,6 +530,8 @@ Resources:
       SecurityGroupIngress:
           - CidrIp: !FindInMap ['SubnetConfig', 'VPC', 'CIDR']
             IpProtocol: -1
+          - CidrIp: 10.1.0.0/16
+            IpProtocol: -1
 
   ECSServiceRole:
     Type: AWS::IAM::Role
@@ -900,22 +902,48 @@ Outputs:
       Name: VPC1
   PrivateSubnetOne:
     Value: !Ref PrivateSubnetOne
+    Export:
+      Name: CrystalSubnet1
   PrivateSubnetTwo:
     Value: !Ref PrivateSubnetTwo
+    Export:
+      Name: CrystalSubnet2
   PrivateSubnetThree:
     Value: !Ref PrivateSubnetThree
+    Export:
+      Name: CrystalSubnet3
+  PublicSubnetOne:
+    Value: !Ref PublicSubnetOne
+    Export:
+      Name: PS1
+  PublicSubnetTwo:
+    Value: !Ref PublicSubnetTwo
+    Export:
+      Name: PS2
+  PublicSubnetThree:
+    Value: !Ref PublicSubnetThree
+    Export:
+      Name: PS3
+  PublicRouteTable:
+    Value: !Ref PublicRouteTable
+    Export:
+      Name: RT1
   EcsClusterName:
     Value: !Ref ECSCluster
+    Export:
+      Name: CrystalCluster
   StackName:
     Value: !Sub ${AWS::StackName}
   CrystalTaskDefinition:
     Value: !Ref CrystalTaskDefinition
+    Export:
+      Name: CrystalTaskDefinition
   RubyTargetGroupArn:
     Value: !Ref RubyTargetGroup
-  CrystalTargetGroupArn:
-    Value: !Ref CrystalTargetGroup
   ContainerSecurityGroup:
     Value: !Ref ContainerSecurityGroup
+    Export:
+      Name: ContainerSg
   CrystalEcrRepo:
     Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${Crystal}
   NodeJSEcrRepo:
