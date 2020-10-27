@@ -896,6 +896,8 @@ Outputs:
     Value: !GetAtt ExternalLoadBalancer.DNSName
   VpcId:
     Value: !Ref VPC
+    Export: 
+      Name: VPC1
   PrivateSubnetOne:
     Value: !Ref PrivateSubnetOne
   PrivateSubnetTwo:
