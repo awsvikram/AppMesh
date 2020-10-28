@@ -1006,6 +1006,25 @@ Resources:
               
       DocumentType: Command
       Name: 'appmesh-workshop-installenvoy'
+  myssmAssociation:
+   Type: AWS::SSM::Association
+   Properties: 
+     AssociationName: "appmesh-workshop-state"
+     MaxConcurrency: 50%
+     MaxErrors: 0
+     Name: !Ref myssmdocument
+     Parameters: 
+       region: 
+         - $AWS_REGION
+       meshName:
+         - appmesh-workshop
+       vNodeName:
+         - frontend
+       appPorts:
+         - 3000
+     Targets: 
+       - Key: "tag:aws:autoscaling:groupName"
+         Values: !Ref RubyAutoscalingGroup
 Outputs:
   ExternalLoadBalancerDNS:
     Description: The DNS for the external load balancer
