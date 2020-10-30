@@ -995,7 +995,8 @@ Resources:
          - 3000
      Targets: 
        - Key: "tag:aws:autoscaling:groupName"
-         Values: !Ref RubyAutoScalingGroup
+         Values:
+         - !Ref RubyAutoScalingGroup
 Outputs:
   ExternalLoadBalancerDNS:
     Description: The DNS for the external load balancer
