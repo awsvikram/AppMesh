@@ -986,7 +986,7 @@ Resources:
      Name: !Ref myssmdocument
      Parameters: 
        region: 
-         - $AWS_REGION
+         - !Ref "AWS::Region"
        meshName:
          - appmesh-workshop
        vNodeName:
