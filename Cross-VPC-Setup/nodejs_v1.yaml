@@ -61,8 +61,35 @@ Resources:
             Retries: 3
             StartPeriod: 10
             Timeout: 2
-
-
+        - Name: envoy
+          Image: "840364872350.dkr.ecr.eu-west-2.amazonaws.com/aws-appmesh-envoy:v1.11.2.0-prod"
+          Essential: true
+          User: 1337
+          Environment:
+           - Name: "APPMESH_VIRTUAL_NODE_NAME"
+             Value: "mesh/appmesh-workshop/virtualNode/nodejs-lb-strawberry"
+          HealthCheck:
+            Command:
+              - CMD-SHELL
+              - curl -s http://localhost:9901/server_info | grep state | grep -q LIVE
+            Retries: 3
+            Timeout: 2
+            Interval: 5
+            StartPeriod: 10
+      ProxyConfiguration:
+          ContainerName: envoy
+          Type: APPMESH
+          ProxyConfigurationProperties:
+          - Name: ProxyIngressPort
+            Value: "15000"
+          - Name: AppPorts
+            Value: "3000"
+          - Name: EgressIgnoredIPs
+            Value: "169.254.170.2,169.254.169.254"
+          - Name: IgnoredUID
+            Value: "1337"
+          - Name: ProxyEgressPort
+            Value: "15001"      
   VPC:
     Type: AWS::EC2::VPC
     Properties:
