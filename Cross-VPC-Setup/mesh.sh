@@ -1,6 +1,6 @@
 # Mesh components for Crystal backend
 Certificate_Arn=$(aws acm list-certificates | jq -r '.CertificateSummaryList[0].CertificateArn');
-CA_Arn=$(aws acm-pca list-certificate-authorities |jq -r '.CertificateAuthorities[0].Arn');
+CA_Arn=$(aws acm-pca list-certificate-authorities | jq -r '.CertificateAuthorities[] | select(.CertificateAuthorityConfiguration.Subject.CommonName=="appmeshworkshop.hosted.local")'.Arn);
 SPEC=$(cat <<-EOF
   { 
     "serviceDiscovery": {
