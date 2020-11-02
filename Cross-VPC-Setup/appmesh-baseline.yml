@@ -530,6 +530,8 @@ Resources:
       SecurityGroupIngress:
           - CidrIp: !FindInMap ['SubnetConfig', 'VPC', 'CIDR']
             IpProtocol: -1
+          - CidrIp: 10.1.0.0/16
+            IpProtocol: -1
 
   ECSServiceRole:
     Type: AWS::IAM::Role
@@ -770,6 +772,8 @@ Resources:
                   - 'logs:CreateLogGroup'
                   - 'logs:PutLogEvents'
                   - 'appmesh:StreamAggregatedResources'
+                  - 'acm:ExportCertificate'
+                  - 'acm-pca:GetCertificateAuthorityCertificate'
                   - 'xray:PutTraceSegments'
                   - 'xray:PutTelemetryRecords'
                   - 'xray:GetSamplingRules'
@@ -887,111 +891,58 @@ Resources:
         - !Ref PublicSubnetOne
         - !Ref PublicSubnetTwo
         - !Ref PublicSubnetThree
-
-  InternalLoadBalancerSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupName: !Sub SecurityGroup-InternalLoadBalancer-${AWS::StackName}
-      GroupDescription: Access to the internal load balancer
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-          - IpProtocol: tcp
-            CidrIp: !FindInMap ['SubnetConfig', 'VPC', 'CIDR']
-            FromPort: 3000
-            ToPort: 3000
-
-  InternalLoadBalancer:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    Properties:
-      Name: !Sub IntLB-${AWS::StackName}
-      Scheme: internal
-      Type: application
-      SecurityGroups:
-        - !Ref InternalLoadBalancerSecurityGroup
-      Subnets:
-        - !Ref PrivateSubnetOne
-        - !Ref PrivateSubnetTwo
-        - !Ref PrivateSubnetThree
-    DependsOn:
-      - PrivateRouteTableOneAssociation
-      - PrivateRouteTableTwoAssociation
-      - PrivateRouteTableThreeAssociation
-
-  InternalListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      DefaultActions:
-        - TargetGroupArn: !Ref CrystalTargetGroup
-          Type: forward
-      LoadBalancerArn: !Ref InternalLoadBalancer
-      Port: 3000
-      Protocol: HTTP
-
-  CrystalTargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      HealthCheckIntervalSeconds: 10
-      HealthCheckPath: /health
-      HealthCheckProtocol: HTTP
-      HealthyThresholdCount: 3
-      UnhealthyThresholdCount: 3
-      Port: 3000
-      Protocol: HTTP
-      VpcId: !Ref VPC
-      TargetType: ip
-
-  DnsHostedZone:
-    Type: AWS::Route53::HostedZone
-    Properties:
-      Name: appmeshworkshop.hosted.local
-      HostedZoneConfig:
-        Comment: Private hosted zone
-      VPCs:
-        - VPCId: !Ref VPC
-          VPCRegion: !Ref AWS::Region
-
-  CrystalRecordSet:
-    Type: AWS::Route53::RecordSet
-    DependsOn:
-      - InternalLoadBalancer
-    Properties:
-      AliasTarget:
-        HostedZoneId: !GetAtt InternalLoadBalancer.CanonicalHostedZoneID
-        DNSName: !GetAtt InternalLoadBalancer.DNSName
-      HostedZoneId: !Ref DnsHostedZone
-      Name: crystal.appmeshworkshop.hosted.local
-      Type: A
-
 Outputs:
-  InternalLoadBalancerDNS:
-    Description: The DNS for the internal load balancer
-    Value: !GetAtt InternalLoadBalancer.DNSName
-  InternalLoadBalancerArn:
-    Description: The ARN for the internal load balancer
-    Value: !Ref InternalLoadBalancer
   ExternalLoadBalancerDNS:
     Description: The DNS for the external load balancer
     Value: !GetAtt ExternalLoadBalancer.DNSName
   VpcId:
     Value: !Ref VPC
+    Export: 
+      Name: VPC1
   PrivateSubnetOne:
     Value: !Ref PrivateSubnetOne
+    Export:
+      Name: CrystalSubnet1
   PrivateSubnetTwo:
     Value: !Ref PrivateSubnetTwo
+    Export:
+      Name: CrystalSubnet2
   PrivateSubnetThree:
     Value: !Ref PrivateSubnetThree
+    Export:
+      Name: CrystalSubnet3
+  PublicSubnetOne:
+    Value: !Ref PublicSubnetOne
+    Export:
+      Name: PS1
+  PublicSubnetTwo:
+    Value: !Ref PublicSubnetTwo
+    Export:
+      Name: PS2
+  PublicSubnetThree:
+    Value: !Ref PublicSubnetThree
+    Export:
+      Name: PS3
+  PublicRouteTable:
+    Value: !Ref PublicRouteTable
+    Export:
+      Name: RT1
   EcsClusterName:
     Value: !Ref ECSCluster
+    Export:
+      Name: CrystalCluster
   StackName:
     Value: !Sub ${AWS::StackName}
   CrystalTaskDefinition:
     Value: !Ref CrystalTaskDefinition
+    Export:
+      Name: CrystalTaskDefinition
   RubyTargetGroupArn:
     Value: !Ref RubyTargetGroup
-  CrystalTargetGroupArn:
-    Value: !Ref CrystalTargetGroup
   ContainerSecurityGroup:
     Value: !Ref ContainerSecurityGroup
+    Export:
+      Name: ContainerSg
   CrystalEcrRepo:
     Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${Crystal}
   NodeJSEcrRepo:
