@@ -60,9 +60,9 @@
       },
       "AppMeshCert":{
          "Type":"AWS::CertificateManager::Certificate",
-         "Properties" :{
-            "DomainName":"*.appmeshworkshop.hosted.local"
-            "CertificateAuthorityArn" :{
+         "Properties":{
+            "DomainName":"*.appmeshworkshop.hosted.local",
+            "CertificateAuthorityArn":{
                "Ref":"RootCA"
             }
          }
@@ -72,13 +72,13 @@
       "RootCA":{
          "Value":{ "Ref" : "RootCA" },
          "Export" : {
-           "Name" : {"RootCA"}
+           "Name" : "RootCA"
          }
       },
       "AppMeshCert":{
          "Value":{ "Ref" : "AppMeshCert" },
          "Export" : {
-            "Name" : {"AppMeshCert"}
+            "Name" : "AppMeshCert"
          }
       }   
    }
