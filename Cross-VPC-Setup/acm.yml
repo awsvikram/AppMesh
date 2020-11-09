@@ -60,6 +60,7 @@
       },
       "AppMeshCert":{
          "Type":"AWS::CertificateManager::Certificate",
+         "DependsOn" : "RootCAActivation",
          "Properties":{
             "DomainName":"*.appmeshworkshop.hosted.local",
             "CertificateAuthorityArn":{
