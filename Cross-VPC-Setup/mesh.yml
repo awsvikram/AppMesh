@@ -123,7 +123,7 @@ Resources:
         Backends:
           - VirtualService:
               VirtualServiceName: "crystal.appmeshworkshop.hosted.local"
-            VirtualService:
+          - VirtualService:
               VirtualServiceName: "nodejs.appmeshworkshop.hosted.local"
         Logging:
           AccessLog:
