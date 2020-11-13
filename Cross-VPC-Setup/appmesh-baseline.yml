@@ -74,7 +74,7 @@ Resources:
             StartPeriod: 10
             Timeout: 2
         - Name: envoy
-          Image: "840364872350.dkr.ecr.eu-west-2.amazonaws.com/aws-appmesh-envoy:v1.11.2.0-prod"
+          Image: "840364872350.dkr.ecr.eu-west-2.amazonaws.com/aws-appmesh-envoy:v1.15.1.0-prod"
           Essential: true
           User: 1337
           Environment:
@@ -624,21 +624,15 @@ Resources:
           def handler(event, context):
             ec2 = boto3.client('ec2')
             ssm = boto3.client('ssm')
-
             data = {}
-
             keyname = event['ResourceProperties']['KeyName']
             keyid = event['ResourceProperties']['KeyId']
-
             paramName = '/appmeshworkshop/keypair/{}'.format(keyname)
-
             try:
-
               if (event["RequestType"] == 'Delete'):
                 ssm.delete_parameter(Name = paramName)
                 ec2.delete_key_pair(KeyName=keyname)
                 cfnresponse.send(event, context, cfnresponse.SUCCESS, data)
-
               if (event["RequestType"] == 'Create'):
                 response = ec2.create_key_pair(KeyName=keyname)
                 ssm.put_parameter(
@@ -650,12 +644,10 @@ Resources:
                 )
                 data['Name'] = keyname
                 cfnresponse.send(event, context, cfnresponse.SUCCESS, data)
-
             except Exception as e:
               errorMessage = e.response['Error']['Message']
               data['Message'] = errorMessage
               cfnresponse.send(event, context, cfnresponse.FAILED, data)
-
   KeyPairHelperExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -829,7 +821,6 @@ Resources:
                 - |
                   #!/bin/bash -ex
                   exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
-
                   # Install required libs
                   yum install -y git gcc gcc-c++ make readline-devel openssl-devel sqlite-devel gmp-devel jq
                   
@@ -838,36 +829,29 @@ Resources:
                   echo 'export PATH="/tmp/.rbenv/bin:/usr/local/bin:$PATH"' >> /tmp/.bashrc
                   echo 'eval "$(rbenv init -)"' >> /tmp/.bashrc
                   source /tmp/.bashrc
-
                   # Install ruby-build
                   git clone git://github.com/rbenv/ruby-build.git /tmp/ruby-build
                   cd /tmp/ruby-build
                   ./install.sh
-
                   rbenv install 2.5.1 && rbenv global 2.5.1
-
                   # Install rails and bundler
                   gem install --force rails bundler
                   gem update --system
-
                   # Clone the repo and build the app
                   export RUBY_ROOT=/tmp/ecsdemo-frontend
                   git clone https://github.com/ffeijoo/ecsdemo-frontend.git /tmp/ecsdemo-frontend
                   cd $RUBY_ROOT
                   bundle update --bundler
                   bundle install
-
                   # Set environment variables for routing
                   export MESH_RUN='true'
                   export CRYSTAL_URL='http://crystal.appmeshworkshop.hosted.local:3000/crystal'
                   export NODEJS_URL='http://nodejs.appmeshworkshop.hosted.local:3000'
-
                   # Run at boot
                   sed -i '$ d' startup.sh && echo 'rails s -e production -b 0.0.0.0' >> startup.sh
                   nohup ./startup.sh &
                   
                 - |                  
-
         TagSpecifications:
           - ResourceType: instance
             Tags:
@@ -895,6 +879,8 @@ Outputs:
   ExternalLoadBalancerDNS:
     Description: The DNS for the external load balancer
     Value: !GetAtt ExternalLoadBalancer.DNSName
+    Export:
+      Name: EXTLB
   VpcId:
     Value: !Ref VPC
     Export: 
